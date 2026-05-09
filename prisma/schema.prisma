@@ -1,0 +1,279 @@
+// NestIQ Prisma schema — Module 2
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  AGENT
+  ADMIN
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  PLOT
+  COMMERCIAL
+  PG
+}
+
+enum PriceType {
+  SALE
+  RENT
+}
+
+enum AreaUnit {
+  SQFT
+  SQM
+  SQYD
+  ACRE
+  HECTARE
+}
+
+enum Furnishing {
+  FURNISHED
+  SEMI
+  UNFURNISHED
+}
+
+enum PropertyStatus {
+  ACTIVE
+  SOLD
+  RENTED
+  INACTIVE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  VIRTUAL_TOUR
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
+
+enum InquiryStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  phone          String?
+  avatar         String?
+  hashedPassword String?
+  role           Role      @default(BUYER)
+  verified       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  properties    Property[] @relation("PropertySeller")
+  reviews       Review[]
+  favorites     Favorite[]
+  inquiries     Inquiry[]
+  chatsAsBuyer  Chat[]     @relation("ChatBuyer")
+  chatsAsSeller Chat[]     @relation("ChatSeller")
+  messages      Message[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Property {
+  id           String         @id @default(cuid())
+  title        String
+  description  String         @db.Text
+  price        Decimal        @db.Decimal(14, 2)
+  priceType    PriceType
+  propertyType PropertyType
+  bedrooms     Int            @default(0)
+  bathrooms    Int            @default(0)
+  area         Decimal        @db.Decimal(12, 2)
+  areaUnit     AreaUnit       @default(SQFT)
+  address      String
+  city         String
+  state        String
+  pincode      String
+  lat          Float?
+  lng          Float?
+  amenities    String[]
+  furnishing   Furnishing     @default(UNFURNISHED)
+  facing       String?
+  floorNo      Int?
+  totalFloors  Int?
+  age          Int?
+  parking      Int            @default(0)
+  status       PropertyStatus @default(ACTIVE)
+  verified     Boolean        @default(false)
+  featured     Boolean        @default(false)
+  views        Int            @default(0)
+  sellerId     String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  seller       User            @relation("PropertySeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  media        PropertyMedia[]
+  reviews      Review[]
+  favorites    Favorite[]
+  inquiries    Inquiry[]
+  chats        Chat[]
+  priceHistory PriceHistory[]
+
+  @@index([sellerId])
+  @@index([city, state])
+  @@index([propertyType, priceType])
+  @@index([status])
+  @@index([featured])
+}
+
+model PropertyMedia {
+  id         String    @id @default(cuid())
+  propertyId String
+  url        String
+  type       MediaType @default(IMAGE)
+  order      Int       @default(0)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  rating     Int
+  comment    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([userId])
+}
+
+model Chat {
+  id         String   @id @default(cuid())
+  buyerId    String
+  sellerId   String
+  propertyId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  buyer    User      @relation("ChatBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller   User      @relation("ChatSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([propertyId, buyerId, sellerId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([propertyId])
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  chatId    String
+  senderId  String
+  content   String      @db.Text
+  type      MessageType @default(TEXT)
+  read      Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId])
+}
+
+model Inquiry {
+  id         String        @id @default(cuid())
+  userId     String
+  propertyId String
+  message    String        @db.Text
+  status     InquiryStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([userId])
+  @@index([status])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  propertyId String
+  price      Decimal  @db.Decimal(14, 2)
+  recordedAt DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([recordedAt])
+}
