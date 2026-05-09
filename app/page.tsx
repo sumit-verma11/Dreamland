@@ -7,7 +7,7 @@ import { Testimonials } from "@/components/home/testimonials";
 import { TrendingCities } from "@/components/home/trending-cities";
 import { Navbar } from "@/components/nav/navbar";
 
-export default function Home() {
+export default async function Home() {
   return (
     <>
       <Navbar />

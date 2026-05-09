@@ -1,31 +1,55 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
-import { PropertyCard } from "@/components/home/property-card";
 import { Button } from "@/components/ui/button";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import { FEATURED_PROPERTIES } from "@/lib/mock-data";
+import { prisma } from "@/lib/prisma";
+import { matchScoreFor } from "@/lib/property-search";
+import { FeaturedPropertiesCarousel } from "@/components/home/featured-properties-carousel";
 
-export function FeaturedProperties() {
+export async function FeaturedProperties() {
+  const raw = await prisma.property.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: [{ featured: "desc" }, { views: "desc" }, { createdAt: "desc" }],
+    take: 8,
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      priceType: true,
+      city: true,
+      address: true,
+      bedrooms: true,
+      bathrooms: true,
+      area: true,
+      areaUnit: true,
+      verified: true,
+      featured: true,
+      media: { orderBy: { order: "asc" }, take: 1, select: { url: true } },
+    },
+  });
+
+  const properties = raw.map((p) => ({
+    id: p.id,
+    title: p.title,
+    price: Number(p.price),
+    priceType: p.priceType,
+    city: p.city,
+    // Use the first comma-separated segment of the address as the locality
+    locality: p.address.split(",")[0]?.trim() ?? p.city,
+    bedrooms: p.bedrooms,
+    bathrooms: p.bathrooms,
+    area: Number(p.area),
+    areaUnit: p.areaUnit,
+    coverUrl: p.media[0]?.url ?? null,
+    verified: p.verified,
+    featured: p.featured,
+    matchScore: matchScoreFor(p.id),
+  }));
+
   return (
     <section id="featured" className="bg-background py-20">
       <div className="container">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5 }}
-          className="flex items-end justify-between gap-6"
-        >
+        <div className="flex items-end justify-between gap-6">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-emerald-600">
               Featured
@@ -38,38 +62,16 @@ export function FeaturedProperties() {
             </p>
           </div>
           <Button asChild variant="ghost" className="hidden shrink-0 sm:inline-flex">
-            <Link href="/buy">
+            <Link href="/search">
               View all
               <ArrowRight className="ml-1.5 size-4" />
             </Link>
           </Button>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-10"
-        >
-          <Carousel
-            opts={{ align: "start", loop: false }}
-            className="relative"
-          >
-            <CarouselContent className="-ml-4">
-              {FEATURED_PROPERTIES.map((property) => (
-                <CarouselItem
-                  key={property.id}
-                  className="basis-[85%] pl-4 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-                >
-                  <PropertyCard property={property} />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden lg:-left-6 lg:flex" />
-            <CarouselNext className="hidden lg:-right-6 lg:flex" />
-          </Carousel>
-        </motion.div>
+        <div className="mt-10">
+          <FeaturedPropertiesCarousel properties={properties} />
+        </div>
       </div>
     </section>
   );
