@@ -13,6 +13,7 @@ import { SimilarProperties } from "@/components/property/similar-properties";
 import { SpecsRow } from "@/components/property/specs-row";
 import { StickySidebar } from "@/components/property/sticky-sidebar";
 import { VirtualTourButton } from "@/components/property/virtual-tour-button";
+import { EmiCalculator } from "@/components/tools/emi-calculator";
 import { Navbar } from "@/components/nav/navbar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -275,6 +276,16 @@ export default async function PropertyPage({ params }: { params: { id: string } 
 
               <Separator />
               <SimilarProperties items={similar} />
+
+              <Separator />
+              <section>
+                <h2 className="mb-6 text-xl font-semibold">EMI &amp; Buying Cost Calculator</h2>
+                <EmiCalculator
+                  initialPrice={detail.price}
+                  initialState={detail.state}
+                  propertyType={detail.propertyType}
+                />
+              </section>
 
               <Separator />
               <ReviewsSection
