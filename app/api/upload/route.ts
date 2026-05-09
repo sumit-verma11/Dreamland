@@ -21,12 +21,12 @@ export async function POST(req: Request) {
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
   if (file.size > MAX_FILE_SIZE) return NextResponse.json({ error: "File too large (max 10 MB)" }, { status: 400 });
 
-  // When Cloudinary is not configured, return a deterministic placeholder for dev.
+  // When Cloudinary is not configured, return a relevant property placeholder for dev.
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_SECRET) {
-    const seed = `nestiq-${session.user.id}-${Date.now()}`;
+    const lock = (Date.now() % 50) + 1; // 1–50 for variety
     return NextResponse.json({
-      url: `https://picsum.photos/seed/${seed}/800/600`,
-      publicId: seed,
+      url: `https://loremflickr.com/800/600/apartment,interior?lock=${lock}`,
+      publicId: `dev-${lock}`,
     });
   }
 

@@ -15,51 +15,36 @@ const CITIES = [
 
 const PROPERTY_TYPES = ["APARTMENT", "VILLA", "PLOT", "COMMERCIAL", "PG"] as const;
 
-// Curated Unsplash photos per property type — buildings, interiors, land only.
-const UNS = (id: string) =>
-  `https://images.unsplash.com/photo-${id}?w=800&auto=format&fit=crop&q=70`;
+// LoremFlickr: free, no API key, category-specific, lock = consistent image.
+// Same URL always returns the same Flickr CC photo for that keyword+lock combo.
+const FL = (tag: string, lock: number) =>
+  `https://loremflickr.com/800/600/${tag}?lock=${lock}`;
 
 const PROPERTY_IMAGES: Record<string, string[]> = {
+  // 28 unique apartment/flat photos — enough for 9 properties with 3 imgs each
   APARTMENT: [
-    UNS("1545324418-cc1a3fa13b78"), // high-rise apartment complex
-    UNS("1502672260266-1c1ef2d93688"), // bright modern living room
-    UNS("1560448204-e02f11c3d0e2"),   // contemporary flat interior
-    UNS("1484154218962-a197022b5858"), // open-plan kitchen
-    UNS("1522708323590-d24dbb6b0267"), // cosy apartment bedroom
-    UNS("1512918728675-ed5a9ecdebfd"), // apartment block exterior
-    UNS("1567767292278-a4f21aa2d36e"), // master bedroom
-    UNS("1556909114-f6e7ad7d3136"),    // minimalist living space
-    UNS("1574362848149-11496d93a7c7"), // modern high-rise tower
-    UNS("1493809842364-78817add7ffb"), // city apartment skyline
+    ...Array.from({ length: 14 }, (_, i) => FL("apartment", i + 1)),
+    ...Array.from({ length: 14 }, (_, i) => FL("flat,interior", i + 1)),
   ],
+  // 24 unique house/villa photos
   VILLA: [
-    UNS("1580587771525-78b9dba3b914"), // modern white villa exterior
-    UNS("1613490493576-7c504fe2bde6"), // luxury villa with garden
-    UNS("1600585154340-be6161a56a0c"), // contemporary house facade
-    UNS("1583608205776-bfd35f0d9f83"), // house with manicured lawn
-    UNS("1600596542815-ffad4c1539a9"), // villa with private pool
-    UNS("1570129477492-45c003edd2be"), // detached house exterior
-    UNS("1558618666-fcd25c85cd64"),    // villa entrance
-    UNS("1599427303058-f04cbcf4756f"), // tropical-style bungalow
+    ...Array.from({ length: 12 }, (_, i) => FL("house,exterior", i + 1)),
+    ...Array.from({ length: 12 }, (_, i) => FL("villa", i + 1)),
   ],
+  // 16 land photos
   PLOT: [
-    UNS("1500382017468-9049fed747ef"), // open land at golden hour
-    UNS("1569437061241-a848be43cc82"), // vacant plot with clear sky
-    UNS("1416331108676-a22ccb276e35"), // scenic plot / terrain
-    UNS("1536895058696-a69b1c7ba34f"), // plot boundary markers
+    ...Array.from({ length: 8 }, (_, i) => FL("land", i + 1)),
+    ...Array.from({ length: 8 }, (_, i) => FL("real,estate,land", i + 1)),
   ],
+  // 20 commercial / office photos
   COMMERCIAL: [
-    UNS("1497366216548-37526070297c"), // open-plan modern office
-    UNS("1486325212027-8081e485255e"), // glass commercial tower
-    UNS("1497366754035-f200968a5db4"), // well-lit office interior
-    UNS("1604328702728-1d5f1e8fc0d6"), // multi-storey office building
-    UNS("1431540015396-23f89ef02f33"), // co-working space
+    ...Array.from({ length: 10 }, (_, i) => FL("office", i + 1)),
+    ...Array.from({ length: 10 }, (_, i) => FL("commercial,building", i + 1)),
   ],
+  // 16 furnished-room photos
   PG: [
-    UNS("1555854222-ffd40dc8cf83"),    // neatly furnished shared room
-    UNS("1631049307264-da0ec9d70304"), // clean PG-style bedroom
-    UNS("1522771739844-6a9f6d5f14af"), // simple furnished bedroom
-    UNS("1560185007-c5ca9d2c014d"),    // hostel-style bunk room
+    ...Array.from({ length: 8 }, (_, i) => FL("bedroom", i + 1)),
+    ...Array.from({ length: 8 }, (_, i) => FL("hostel,room", i + 1)),
   ],
 };
 const PRICE_TYPES = ["SALE", "RENT"] as const;
@@ -207,9 +192,11 @@ async function main() {
         media: {
           create: (() => {
             const pool = PROPERTY_IMAGES[propertyType] ?? PROPERTY_IMAGES.APARTMENT;
-            // Rotate through the pool using the property index so each gets different photos
+            // Each property picks 3 consecutive images starting at a unique offset
+            // stride=7 (prime) ensures we don't hit the same images for sequential i
+            const offset = (i * 7) % pool.length;
             return Array.from({ length: 3 }, (_, k) => ({
-              url: pool[(i * 3 + k) % pool.length],
+              url: pool[(offset + k) % pool.length],
               type: "IMAGE" as const,
               order: k,
             }));
