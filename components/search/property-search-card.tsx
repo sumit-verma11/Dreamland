@@ -3,12 +3,17 @@
 import {
   Bath,
   BedDouble,
+  Building,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Heart,
+  LayoutGrid,
   Maximize,
   MapPin,
   ShieldCheck,
+  TreePine,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -37,9 +42,8 @@ export function PropertySearchCard({
   onToggleCompare,
 }: Props) {
   const [imgIdx, setImgIdx] = useState(0);
-  const images = property.images.length > 0
-    ? property.images
-    : [`https://picsum.photos/seed/${property.id}/640/480`];
+  const images = property.images.filter(Boolean);
+  const hasImages = images.length > 0;
 
   const isList = variant === "list";
 
@@ -56,13 +60,17 @@ export function PropertySearchCard({
           isList ? "aspect-[4/3] w-72 shrink-0" : "aspect-[4/3]",
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={images[imgIdx]}
-          alt={property.title}
-          className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-          loading="lazy"
-        />
+        {hasImages ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={images[imgIdx]}
+            alt={property.title}
+            className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            loading="lazy"
+          />
+        ) : (
+          <PropertyImagePlaceholder type={property.propertyType} />
+        )}
 
         {images.length > 1 && (
           <>
@@ -190,5 +198,34 @@ export function PropertySearchCard({
         )}
       </div>
     </article>
+  );
+}
+
+const TYPE_ICON: Record<string, React.ElementType> = {
+  APARTMENT: Building,
+  VILLA: Building2,
+  PLOT: TreePine,
+  COMMERCIAL: LayoutGrid,
+  PG: Users,
+};
+
+const TYPE_GRADIENT: Record<string, string> = {
+  APARTMENT: "from-blue-100 to-blue-50",
+  VILLA: "from-emerald-100 to-emerald-50",
+  PLOT: "from-amber-100 to-amber-50",
+  COMMERCIAL: "from-violet-100 to-violet-50",
+  PG: "from-rose-100 to-rose-50",
+};
+
+function PropertyImagePlaceholder({ type }: { type: string }) {
+  const Icon = TYPE_ICON[type] ?? Building;
+  const gradient = TYPE_GRADIENT[type] ?? "from-muted to-muted/50";
+  return (
+    <div className={`flex size-full flex-col items-center justify-center gap-2 bg-gradient-to-br ${gradient}`}>
+      <Icon className="size-10 opacity-30" />
+      <span className="text-xs font-medium capitalize text-muted-foreground opacity-60">
+        {type.toLowerCase()}
+      </span>
+    </div>
   );
 }
